@@ -12,10 +12,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Unzip if zip exists
+      - name: Locate and Extract Zip
         run: |
-          if [ -f "SmartSmsDistributor.zip" ]; then
-            unzip -o SmartSmsDistributor.zip
+          ZIP_FILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
+          if [ -n "$ZIP_FILE" ]; then
+            echo "Extracting $ZIP_FILE..."
+            unzip -o "$ZIP_FILE" -d project_source
+          else
+            echo "No zip file found."
           fi
 
       - name: Set up JDK 17
@@ -31,9 +35,16 @@ jobs:
 
       - name: Build Debug APK
         run: |
-          PROJECT_DIR=$(dirname "$(find . -maxdepth 3 -name 'settings.gradle.kts' | head -n 1)")
-          echo "Building in: $PROJECT_DIR"
-          cd "$PROJECT_DIR"
+          if [ -d "project_source" ]; then
+            cd project_source
+          fi
+          PROJECT_DIR=$(dirname "$(find . -maxdepth 3 -name 'settings.gradle*' | head -n 1)")
+          if [[ -z "$PROJECT_DIR" || "$PROJECT_DIR" == "." ]]; then
+            echo "Using current directory"
+          else
+            echo "Entering $PROJECT_DIR"
+            cd "$PROJECT_DIR"
+          fi
           gradle assembleDebug
 
       - name: Upload APK
